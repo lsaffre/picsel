@@ -129,7 +129,7 @@ def get_photos(conn, tags):
             yield row[1]
 
 
-RSTLINE = """.. sigal_image:: %s\n"""
+RSTLINE = """.. sigal_image:: {0}\n"""
 
 
 @dispatch_command
@@ -139,11 +139,14 @@ RSTLINE = """.. sigal_image:: %s\n"""
      help='Where to export tagged pictures and videos.')
 @arg('-l', '--shotwell_lib',
      help='Your Shotwell library directory')
+@arg('-s', '--sigal_image',
+     help='Output as sigal_image directives')
 @arg('-d', '--shotwell_db',
      help='Your Shotwell database file')
 def main(target_root=None,
          shotwell_lib=expanduser("~/Pictures/"),
          shotwell_db=expanduser("~/.local/share/shotwell/data/photo.db"),
+         sigal_image=False,
          *tags):
     """Copy tagged photos and videos from shotwell photo database to a target
 filesystem."""
@@ -168,10 +171,10 @@ filesystem."""
 
     targets = []
     for orig in get_photos(conn, tags):
+        target = chop(orig, shotwell_lib)
+        target = target.lower()
+        targets.append(target)
         if target_root:
-            target = chop(orig, shotwell_lib)
-            target = target.lower()
-            targets.append(target)
             target = os.path.join(target_root, target)
             if os.path.exists(target):
                 yield "{0} exists".format(target)
@@ -183,14 +186,16 @@ filesystem."""
                 yield "{0} copied".format(target)
                 shutil.copyfile(orig, target)
         else:
-            yield orig
+            if sigal_image:
+                yield RSTLINE.format(target)
+            else:
+                yield orig
 
     conn.close()
 
     if target_root:
-        targets.sort()
         fn = os.path.join(target_root, 'index.rst')
         rstfile = codecs.open(fn, "w", encoding="utf-8")
         for t in targets:
-            rstfile.write(RSTLINE % t)
+            rstfile.write(RSTLINE.format(t))
         rstfile.close()
