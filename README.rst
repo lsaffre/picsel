@@ -50,7 +50,8 @@ option is to *not* include directory names)::
 
   $ shotwell2blog.py Foo | xargs zip -j foo.zip
 
-Create a zip file with all photos tagged Foo and taken after 2015-01-01::
+Create a zip file with all photos tagged Foo and taken after
+2015-01-01, expect those with "AÜ" in their name::
 
   $ shotwell2blog.py -a 2015-01-01 Foo | grep -v AÜ | xargs zip Foo2015.zip
 
