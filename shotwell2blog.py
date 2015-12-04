@@ -1,5 +1,5 @@
 #!python
-# Copyright 2014 by Luc Saffre.
+# Copyright 2014-2015 by Luc Saffre.
 # License: BSD, see LICENSE for more details.
 
 """
@@ -7,35 +7,43 @@
 Thanks to Maarek for first inspiration
 http://forum.ubuntu-fr.org/viewtopic.php?id=415396
 
+Change history:
+
+- 2015-09-19 accept non-ascii tags
+- 2015-12-04 new command-line options `before` and `after`
+
 """
 
 from __future__ import print_function
 from __future__ import unicode_literals
-
+import time
+from time import mktime
+from datetime import datetime
+from dateutil import parser
 
 """
 
 sqlite_master : ['type', 'name', 'tbl_name', 'rootpage', 'sql']
 
-- TagTable: 
+- TagTable:
   - name : name of the tag (e.g. "blog")
   - photo_id_list : comma-separated list of photo ids
 
 CREATE TABLE PhotoTable (
-id INTEGER PRIMARY KEY, 
-filename TEXT UNIQUE NOT NULL, 
-width INTEGER, 
-height INTEGER, 
-filesize INTEGER, 
-timestamp INTEGER, 
-exposure_time INTEGER, 
+id INTEGER PRIMARY KEY,
+filename TEXT UNIQUE NOT NULL,
+width INTEGER,
+height INTEGER,
+filesize INTEGER,
+timestamp INTEGER,
+exposure_time INTEGER,
 orientation INTEGER,
-original_orientation INTEGER, 
-import_id INTEGER, 
+original_orientation INTEGER,
+import_id INTEGER,
 event_id INTEGER,
-transformations TEXT, 
-md5 TEXT, 
-thumbnail_md5 TEXT, 
+transformations TEXT,
+md5 TEXT,
+thumbnail_md5 TEXT,
 exif_md5 TEXT,
 time_created INTEGER,
 flags INTEGER DEFAULT 0,
@@ -96,8 +104,10 @@ def show_tables(conn):
 
 
 def get_photos(conn, tags):
+    """Yield a tuple (filename, """
+    encoding = "utf-8"
     cursor = conn.cursor()
-    li = ','.join(["'{0}'".format(t) for t in tags])
+    li = ','.join(["'{0}'".format(t.decode(encoding)) for t in tags])
     where = "name in ({0})".format(li)
     sql = "SELECT photo_id_list FROM TagTable WHERE {0}".format(where)
     # sql = "SELECT photo_id_list FROM TagTable WHERE name = '%s'" % tagname
@@ -121,12 +131,13 @@ def get_photos(conn, tags):
 
     if len(photo_ids):
         li = ','.join([str(i) for i in photo_ids])
-        sql = "SELECT id, filename FROM PhotoTable WHERE id IN ({0})"
+        sql = "SELECT id, filename, time_created " \
+              "FROM PhotoTable WHERE id IN ({0})"
         sql = sql.format(li)
         sql += " ORDER BY exposure_time"
         cursor.execute(sql)
         for row in cursor:
-            yield row[1]
+            yield row[1], row[2]
 
 
 RSTLINE = """.. sigal_image:: {0}\n"""
@@ -141,15 +152,23 @@ RSTLINE = """.. sigal_image:: {0}\n"""
      help='Your Shotwell library directory')
 @arg('-s', '--sigal_image',
      help='Output as sigal_image directives')
+@arg('-b', '--before',
+     help='Select photos taken before that time')
+@arg('-a', '--after',
+     help='Select photos taken after that time')
 @arg('-d', '--shotwell_db',
      help='Your Shotwell database file')
 def main(target_root=None,
          shotwell_lib=expanduser("~/Pictures/"),
          shotwell_db=expanduser("~/.local/share/shotwell/data/photo.db"),
          sigal_image=False,
+         before=None, after=None,
          *tags):
-    """Copy tagged photos and videos from shotwell photo database to a target
-filesystem."""
+    """Export tagged photos and videos from a Shotwell photo database to a
+    target filesystem or list them in different ways.
+    See <https://github.com/lsaffre/shotwell2blog>.
+
+    """
 
     if target_root:
         if not os.path.exists(target_root):
@@ -169,8 +188,12 @@ filesystem."""
     if len(tags) == 0:
         raise CommandError("Must specify at least one tag!")
 
+    if before is not None:
+        before = parser.parse(before)
+    if after is not None:
+        after = parser.parse(after)
     targets = []
-    for orig in get_photos(conn, tags):
+    for orig, time_created in get_photos(conn, tags):
         target = chop(orig, shotwell_lib)
         target = target.lower()
         targets.append(target)
@@ -189,7 +212,12 @@ filesystem."""
             if sigal_image:
                 yield RSTLINE.format(target)
             else:
-                yield orig
+                t = time.localtime(time_created)
+                t = datetime.fromtimestamp(mktime(t))
+                if before is None or t <= before:
+                    if after is None or t >= after:
+                        # yield "{0}|{1}".format(t, orig)
+                        yield orig
 
     conn.close()
 
