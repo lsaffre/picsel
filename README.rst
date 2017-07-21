@@ -2,8 +2,8 @@
 The picsel project
 ==================
 
-This currently consists of two Python scripts :file:`shotwell2blog.py`
-and :file:`digikam2blog.py`.
+This currently consists of two Python scripts `shotwell2blog.py` and
+`digikam2blog.py`.
 
 Both scripts copy tagged photos from a Shotwell or DigiKam photo
 database to a target filesystem. Alternatively they can also simply
@@ -18,7 +18,8 @@ an internet server.
 
 **Usage examples:**
 
-(Replace xxx by shotwell or digipḱam.)
+(Replace ``xxx`` in examples below by either ``shotwell`` or
+``digiḱam``.)
 
 List the file names of all photos tagged "foo"::
 
