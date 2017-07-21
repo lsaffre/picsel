@@ -1,5 +1,5 @@
 #!python
-# Copyright 2014-2015 by Luc Saffre.
+# Copyright 2014-2017 by Luc Saffre.
 # License: BSD, see LICENSE for more details.
 
 """
@@ -16,10 +16,17 @@ Change history:
 
 from __future__ import print_function
 from __future__ import unicode_literals
+import os
+from os.path import expanduser
 import time
 from time import mktime
 from datetime import datetime
 from dateutil import parser
+import shutil
+import codecs
+import sqlite3
+
+from argh import dispatch_command, arg, CommandError
 
 """
 
@@ -69,14 +76,6 @@ time_created INTEGER, rating INTEGER DEFAULT 0, title TEXT, backlinks
 TEXT, time_reimported INTEGER, flags INTEGER DEFAULT 0 , comment TEXT)
 
 """
-
-import os
-import shutil
-import codecs
-from os.path import expanduser
-import sqlite3
-
-from argh import dispatch_command, arg, CommandError
 
 
 def chop(s, prefix):
@@ -188,6 +187,9 @@ def main(target_root=None,
     if len(tags) == 0:
         raise CommandError("Must specify at least one tag!")
 
+    tags = [' '.join(tags)]
+    # multiple tags are not supported.
+
     if before is not None:
         before = parser.parse(before)
     if after is not None:
@@ -196,6 +198,7 @@ def main(target_root=None,
     for orig, time_created in get_photos(conn, tags):
         target = chop(orig, shotwell_lib)
         target = target.lower()
+        target = target.replace(" ", "_")
         targets.append(target)
         if target_root:
             target = os.path.join(target_root, target)
