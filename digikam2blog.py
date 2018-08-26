@@ -15,7 +15,8 @@ Change history:
 """
 
 from __future__ import print_function
-from __future__ import unicode_literals
+#from __future__ import unicode_literals
+import six
 import os
 from os.path import expanduser
 import time
@@ -160,10 +161,10 @@ def get_photos(pics_root, conn, tags):
     # encoding = "utf-8"
     cursor = conn.cursor()
     # li = ','.join(["'{0}'".format(t.decode(encoding)) for t in tags])
-    li = ','.join(["'{0}'".format(t) for t in tags])
+    li = ','.join([u"'{0}'".format(t) for t in tags])
     
-    where = 'tagname in ({0})'.format(li)
-    sql = """
+    where = u'tagname in ({0})'.format(li)
+    sql = u"""
     SELECT tag.name AS tagname, alb.albumRoot, alb.relativePath, 
        img.modificationDate, img.name AS imgname
     FROM ImageTags AS it 
@@ -173,7 +174,7 @@ def get_photos(pics_root, conn, tags):
     WHERE {0}
     ORDER BY img.modificationDate
     """.format(where)
-    print(sql)
+    # print(sql)
     cursor.execute(sql)
     for row in cursor:
         # print("{} {} {} {}".format(row[0], row[1], row[2], row[3]))
@@ -250,7 +251,10 @@ def main(target_root=None,
     if len(tags) == 0:
         raise CommandError("Must specify at least one tag!")
 
+    # tags = [six.text_type(t) for t in tags]
+    # tags = [six.text_type(t).decode('utf8') for t in tags]
     tags = [' '.join(tags)]
+    # tags = tags.decode('utf8')
     # multiple tags are not supported.
 
     if before is not None:
@@ -282,9 +286,10 @@ def main(target_root=None,
                 yield "{0} copied".format(target)
                 shutil.copyfile(orig, target)
         else:
-            t = time_created
+            t = parser.parse(time_created)
+            # t = time_created
             # if t:
-            #     print(t)
+                # print(repr(t))
                 # t = time.localtime(time_created)
                 # t = datetime.fromtimestamp(mktime(t))
             # else:

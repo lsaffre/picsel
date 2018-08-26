@@ -3,7 +3,7 @@ from setuptools import setup
 SETUP_INFO = dict(
     name='picsel',
     version='0.0.1',
-    install_requires=['argh'],
+    install_requires=['unipath', 'argh', 'six', 'python-dateutil'],
     scripts=['shotwell2blog.py', 'digikam2blog.py'],
     description="Export tagged photos from a Shotwell or DigiKam photo database",
     license='Free BSD',
